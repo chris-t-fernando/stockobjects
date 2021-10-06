@@ -8,13 +8,29 @@ from parsing import DateParser
 class Company:
     _company_name: str
     _company_code: str
+    _sector_name: set
+    _sector_code:str
     _quotes: Dict[datetime, CompanyQuote]
 
     def __init__(self, company_name, company_code, sector_object):
         self._company_name = company_name
         self._company_code = company_code
         self._sector_object = sector_object
+        self._sector_name = sector_object.sector_name
+        self._sector_code = sector_object.sector_code
         self._quotes = {}
+
+    @property
+    def sector_code(self) -> str:
+        return self._sector_code
+
+    @property
+    def sector_name(self) -> str:
+        return self._sector_name
+
+    @property
+    def sector_object(self) -> str:
+        return self._sector_object
 
     @property
     def company_code(self) -> str:

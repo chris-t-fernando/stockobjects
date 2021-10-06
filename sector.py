@@ -116,9 +116,23 @@ class Sector:
         date_to: datetime = None,
         date: datetime = None,
     ) -> Dict[datetime, SectorQuote]:
-        return self._get_quote(
-            date_from=date_from, date_to=date_to, date=date, company_code=None
-        )
+        try:
+            dates = DateParser(date_from=date_from, date_to=date_to, date=date)
+        except Exception as e:
+            raise
+
+        matched_quotes = {}
+
+        for quote_date in self._quotes:
+            date_match = False
+            if (
+                dates.date_from <= quote_date.date()
+                and dates.date_to >= quote_date.date()
+            ):
+                matched_quotes[quote_date] = self._quotes[quote_date]
+
+        # not checking for zero returns since zero is a valid response, doesn't mean exception/error
+        return matched_quotes
 
     def get_company_quote(
         self,
@@ -127,26 +141,7 @@ class Sector:
         date: datetime = None,
         company_code: str = None,
     ) -> Dict[datetime, CompanyQuote]:
-        # there will be multiple companies in the sector, so need to loop through them all
-        results = {}
-        for company in self._companies:
-            results[company] = self._get_quote(
-                date_from=date_from,
-                date_to=date_to,
-                date=date,
-                company_code=company_code,
-            )
 
-        # i wonder - if there are no quotes for the company, should I even return it?
-        return results
-
-    def _get_quote(
-        self,
-        date_from: datetime = None,
-        date_to: datetime = None,
-        date: datetime = None,
-        company_code: str = None,
-    ):
         try:
             dates = DateParser(date_from=date_from, date_to=date_to, date=date)
         except Exception as e:
@@ -157,26 +152,9 @@ class Sector:
 
         matched_quotes = {}
 
-        for quote_date in self._quotes:
-            company_match = False
-            date_match = False
-            if (
-                dates.date_from <= quote_date.date()
-                and dates.date_to >= quote_date.date()
-            ):
-                date_match = True
-
-            if company_code != None:
-                # this is super shonky - could be company_code that is the same as sector_code
-                if self._quotes[quote_date].code == company_code:
-                    company_match = True
-            else:
-                company_match = True
-
-            if company_match and date_match:
-                matched_quotes[quote_date] = self._quotes[quote_date]
-
-        # not checking for zero returns since zero is a valid response, doesn't mean exception/error
+        for company in self._companies:
+            matched_quotes[company] = self._companies[company].get_quote(date_from=date_from, date_to=date_to, date=date)
+            
         return matched_quotes
 
     def add_company_quote(
