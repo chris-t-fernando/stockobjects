@@ -90,14 +90,14 @@ class Company:
         except Exception as e:
             raise
 
-        print(f"Going to do some stuff with {dates.date_from} and {dates.date_to}")
-
         matched_quotes = {}
 
         for quote_date in self._quotes:
-            if dates.date_from <= quote_date and dates.date_to >= quote_date:
+            if (
+                dates.date_from <= quote_date.date()
+                and dates.date_to >= quote_date.date()
+            ):
                 matched_quotes[quote_date] = self._quotes[quote_date]
 
         # not checking for zero returns since zero is a valid response, doesn't mean exception/error
         return matched_quotes
-        

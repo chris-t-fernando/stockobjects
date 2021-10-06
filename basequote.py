@@ -16,6 +16,8 @@ class BaseQuote:
     _low: float
     _close: float
     _volume: int
+    # _name: str
+    # _code:str
 
     def __init__(
         self,
@@ -27,14 +29,13 @@ class BaseQuote:
         close: float,
         volume: int,
     ):
-        self._parent = parent,
+        self._parent = parent
         self._date = date
         self._open = open
         self._high = high
         self._low = low
         self._close = close
         self._volume = volume
-
 
     @property
     def name(self) -> str:

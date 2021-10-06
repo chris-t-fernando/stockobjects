@@ -17,14 +17,17 @@
 # SectorCollection->get_company(company_code Str=None, sector_code Str=None)
 # SectorCollection->get_quote(company_code Str=None, sector_code Str=None, date datetime=None)
 # Sector(sector_name Str, sector_code Str)
-# Sector->add_quote(quote SectorQuote)
-# Sector->get_quote(company_code Str=None, date datetime=None)
-# Sector->add_company(company Company)
-# Sector->get_company(company_code Str=None)
-# Sector->company_length()
-# Sector->sector_quote_length()
-# Sector->company_length()
-# Sector->company_quote_length()
+# Sector->add_sector_quote(all the things) -> bool
+# Sector->add_sector_quote_object(quote SectorQuote) -> bool
+# Sector->get_sector_quote(date datetime=None) -> QuoteCollection
+# Sector->add_company(company Company) -> bool
+# Sector->get_company(company_code Str) -> Company
+# Sector->add_company_quote(all the things) -> bool
+# Sector->add_company_quote_object(quote SectorQuote) -> bool
+# Sector->get_company_quote(company_code Str=None) -> QuoteCollection
+# Sector->sector_quote_length() -> int
+# Sector->company_length() -> int
+# Sector->company_quote_length() -> int
 # SectorQuote(all the things)
 # Company(company_name Str, company_code Str)
 # Company->add_quote(quote CompanyQuote)

@@ -54,6 +54,9 @@ class DateParser:
             raise InvalidDateOptions
         elif date_from == None and date_to != None and date != None:
             raise InvalidDateOptions
+        elif date_from == None and date_to != None and date == None:
+            picked_from = datetime.strptime("01-01-1970 00:00:00", "%d-%m-%Y %H:%M:%S")
+            picked_to = date_to
         elif date_from == None and date_to == None and date != None:
             picked_from = date
             picked_to = date
@@ -64,6 +67,10 @@ class DateParser:
             or isinstance(picked_to, datetime) == False
         ):
             raise TypeError("Parameters must be of type datetime")
+
+        # trim out the time
+        picked_from = picked_from.date()
+        picked_to = picked_to.date()
 
         # now we've picked the dates we're going to use, check if they make sense: picked_from is earlier than picked_to
         if picked_from > picked_to:

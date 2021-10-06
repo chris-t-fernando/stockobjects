@@ -22,6 +22,13 @@ class CompanyAlreadyExists(Exception):
             f"Sector already has a company object for {company_code}",
         )
 
+class CompanyDoesNotExist(Exception):
+    def __init__(self, company_code: str):
+        super().__init__(
+            self,
+            f"Sector does not have a Company with the code {company_code}",
+        )
+
 class SectorDoesNotExist(Exception):
     def __init__(self, sector_code: str):
         super().__init__(

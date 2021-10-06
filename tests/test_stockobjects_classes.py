@@ -14,10 +14,10 @@ import string
 import random
 
 # todo: for when I'm randomly generating entire structures.  If I was clever I'd probably use a test fixture
-CONST_TEST_SECTOR_COUNT = 2
-CONST_TEST_COMPANY_COUNT = 3
-CONST_TEST_SECTOR_QUOTES = 5
-CONST_TEST_COMPANY_QUOTES = 5
+CONST_TEST_SECTOR_COUNT = 5
+CONST_TEST_COMPANY_COUNT = 11
+CONST_TEST_SECTOR_QUOTES = 13
+CONST_TEST_COMPANY_QUOTES = 17
 CONST_QUOTES_START_DAY = 1
 
 # for when I'm unit testing individual sectors/companies/quotes
@@ -73,9 +73,12 @@ def generate_sector_collection(
         this_collection.add_sector(generated_sector)
 
         sector_quotes_generated = 0
+        day = 1
         day = CONST_QUOTES_START_DAY
         while sector_quotes_generated < sector_quotes:
-            this_collection.get_sector_by_code(generated_sector.sector_code).add_quote(
+            this_collection.get_sector_by_code(
+                generated_sector.sector_code
+            ).add_sector_quote(
                 date=datetime.strptime(f"{day}/10/20 01:55:19", "%d/%m/%y %H:%M:%S"),
                 open=2,
                 high=2,
@@ -98,9 +101,10 @@ def generate_sector_collection(
 
             # generate quotes for  this company
             company_quotes_generated = 0
+            day = 1
             while company_quotes_generated < company_quotes:
                 this_collection.get_company_by_code(
-                    generated_company.company_code
+                    company_code=generated_company.company_code
                 ).add_quote(
                     date=datetime.strptime(
                         f"{day}/10/20 01:55:19", "%d/%m/%y %H:%M:%S"
@@ -121,23 +125,71 @@ def generate_sector_collection(
     return this_collection
 
 
-class TestSector(unittest.TestCase):
-    def test_sector_name(self):
-        test_sector = Sector(
-            sector_name=CONST_SECTOR1_NAME, sector_code=CONST_SECTOR1_CODE
+class TestTestSetup(unittest.TestCase):
+    def test_generate_sector(self):
+        test_sector = generate_sector()
+        self.assertEqual(isinstance(test_sector, Sector), True)
+
+    def test_generate_company(self):
+        test_company = generate_company(generate_sector())
+        self.assertEqual(isinstance(test_company, Company), True)
+
+    def test_generate_sector_collection(self):
+        test_collection = generate_sector_collection(
+            sector_count=CONST_TEST_SECTOR_COUNT,
+            company_count=CONST_TEST_COMPANY_COUNT,
+            sector_quotes=CONST_TEST_SECTOR_QUOTES,
+            company_quotes=CONST_TEST_COMPANY_QUOTES,
         )
-        result = test_sector.sector_name
-        self.assertEqual(CONST_SECTOR1_NAME, result)
 
-    def test_sector_code(self):
-        test_sector = Sector(
-            sector_name=CONST_SECTOR1_NAME, sector_code=CONST_SECTOR1_CODE
-        )
-        result = test_sector.sector_code
-        self.assertEqual(CONST_SECTOR1_CODE, result)
+        self.assertEqual(isinstance(test_collection, SectorCollection), True)
+        self.assertEqual(len(test_collection._sectors), CONST_TEST_SECTOR_COUNT)
+        for sector in test_collection._sectors:
+            self.assertEqual(isinstance(test_collection._sectors[sector], Sector), True)
+
+            self.assertEqual(
+                len(test_collection._sectors[sector]._quotes), CONST_TEST_SECTOR_QUOTES
+            )
+            for sector_quote in test_collection._sectors[sector]._quotes:
+                self.assertEqual(
+                    isinstance(
+                        test_collection._sectors[sector]._quotes[sector_quote],
+                        SectorQuote,
+                    ),
+                    True,
+                )
+
+            self.assertEqual(
+                len(test_collection._sectors[sector]._companies),
+                CONST_TEST_COMPANY_COUNT,
+            )
+            for company in test_collection._sectors[sector]._companies:
+                self.assertEqual(
+                    isinstance(
+                        test_collection._sectors[sector]._companies[company], Company
+                    ),
+                    True,
+                )
+                self.assertEqual(
+                    len(test_collection._sectors[sector]._companies[company]._quotes),
+                    CONST_TEST_COMPANY_QUOTES,
+                )
+
+                for company_quote in (
+                    test_collection._sectors[sector]._companies[company]._quotes
+                ):
+                    self.assertEqual(
+                        isinstance(
+                            test_collection._sectors[sector]
+                            ._companies[company]
+                            ._quotes[company_quote],
+                            CompanyQuote,
+                        ),
+                        True,
+                    )
 
 
-class TestCompany(unittest.TestCase):
+class TestCompany(unittest.TestCase):  # done
     def test_attr_name(self):
         test_sector = Sector(
             sector_name=CONST_SECTOR1_NAME, sector_code=CONST_SECTOR1_CODE
@@ -307,7 +359,7 @@ class TestCompany(unittest.TestCase):
             for c in test_collection._sectors[s]._companies:
                 test_company = test_collection._sectors[s]._companies[c].code
                 quote_result = test_collection.get_company_by_code(
-                    test_company
+                    company_code=test_company
                 ).get_quote()
                 self.assertEqual(len(quote_result), CONST_TEST_COMPANY_QUOTES)
                 quotes_collected += len(quote_result)
@@ -320,70 +372,646 @@ class TestCompany(unittest.TestCase):
         )
 
     def test_get_quotes_filtered_by_date(self):
+        test_collection = generate_sector_collection(
+            sector_count=CONST_TEST_SECTOR_COUNT,
+            company_count=CONST_TEST_COMPANY_COUNT,
+            sector_quotes=CONST_TEST_SECTOR_QUOTES,
+            company_quotes=CONST_TEST_COMPANY_QUOTES,
+        )
+
+        # todo make this much better - test fixture or something
+        # this is so dodgey. because i'm randomly generating the sector names and company names
+        # and because i know that all sector quotes and company quotes are the same length
+        # basically just get the first company from the first sector and use it as the thing we test
+        quotes_collected = 0
+        for s in test_collection._sectors:
+            for c in test_collection._sectors[s]._companies:
+                test_company = test_collection._sectors[s]._companies[c].code
+                quote_result = test_collection.get_company_by_code(
+                    company_code=test_company
+                ).get_quote(
+                    date=datetime.strptime(f"01/10/20", "%d/%m/%y"),
+                )
+                self.assertEqual(len(quote_result), 1)
+                quotes_collected += len(quote_result)
+
+        self.assertEqual(
+            quotes_collected,
+            CONST_TEST_SECTOR_COUNT * CONST_TEST_COMPANY_COUNT,
+        )
+
+    def test_get_quotes_filtered_by_date_start(self):
+        test_collection = generate_sector_collection(
+            sector_count=CONST_TEST_SECTOR_COUNT,
+            company_count=CONST_TEST_COMPANY_COUNT,
+            sector_quotes=CONST_TEST_SECTOR_QUOTES,
+            company_quotes=CONST_TEST_COMPANY_QUOTES,
+        )
+
+        # todo make this much better - test fixture or something
+        # this is so dodgey. because i'm randomly generating the sector names and company names
+        # and because i know that all sector quotes and company quotes are the same length
+        # basically just get the first company from the first sector and use it as the thing we test
+        quotes_collected = 0
+        for s in test_collection._sectors:
+            for c in test_collection._sectors[s]._companies:
+                test_company = test_collection._sectors[s]._companies[c].code
+                quote_result = test_collection.get_company_by_code(
+                    company_code=test_company
+                ).get_quote(date_from=datetime.strptime(f"03/10/20", "%d/%m/%y"))
+                self.assertEqual(len(quote_result), 3)
+                quotes_collected += len(quote_result)
+
+        self.assertEqual(
+            quotes_collected, CONST_TEST_SECTOR_COUNT * CONST_TEST_COMPANY_COUNT * 3
+        )
+
+    def test_get_quotes_filtered_by_date_end(self):
+        test_collection = generate_sector_collection(
+            sector_count=CONST_TEST_SECTOR_COUNT,
+            company_count=CONST_TEST_COMPANY_COUNT,
+            sector_quotes=CONST_TEST_SECTOR_QUOTES,
+            company_quotes=CONST_TEST_COMPANY_QUOTES,
+        )
+
+        # todo make this much better - test fixture or something
+        # this is so dodgey. because i'm randomly generating the sector names and company names
+        # and because i know that all sector quotes and company quotes are the same length
+        # basically just get the first company from the first sector and use it as the thing we test
+        quotes_collected = 0
+        for s in test_collection._sectors:
+            for c in test_collection._sectors[s]._companies:
+                test_company = test_collection._sectors[s]._companies[c].code
+                quote_result = test_collection.get_company_by_code(
+                    company_code=test_company
+                ).get_quote(date_to=datetime.strptime(f"02/10/20", "%d/%m/%y"))
+                self.assertEqual(len(quote_result), 2)
+                quotes_collected += len(quote_result)
+
+        self.assertEqual(
+            quotes_collected, CONST_TEST_SECTOR_COUNT * CONST_TEST_COMPANY_COUNT * 2
+        )
+
+    def test_get_quotes_filtered_by_date_start_and_date_end(self):
+        test_collection = generate_sector_collection(
+            sector_count=CONST_TEST_SECTOR_COUNT,
+            company_count=CONST_TEST_COMPANY_COUNT,
+            sector_quotes=CONST_TEST_SECTOR_QUOTES,
+            company_quotes=CONST_TEST_COMPANY_QUOTES,
+        )
+
+        # todo make this much better - test fixture or something
+        # this is so dodgey. because i'm randomly generating the sector names and company names
+        # and because i know that all sector quotes and company quotes are the same length
+        # basically just get the first company from the first sector and use it as the thing we test
+        quotes_collected = 0
+        for s in test_collection._sectors:
+            for c in test_collection._sectors[s]._companies:
+                test_company = test_collection._sectors[s]._companies[c].code
+                quote_result = test_collection.get_company_by_code(
+                    company_code=test_company
+                ).get_quote(
+                    date_from=datetime.strptime(f"01/10/20", "%d/%m/%y"),
+                    date_to=datetime.strptime(f"05/10/20", "%d/%m/%y"),
+                )
+                self.assertEqual(len(quote_result), 5)
+                quotes_collected += len(quote_result)
+
+        self.assertEqual(
+            quotes_collected,
+            CONST_TEST_SECTOR_COUNT * CONST_TEST_COMPANY_COUNT * 5,
+        )
+
+
+class TestCompanyQuote(unittest.TestCase):  # done
+    def test_attr_name(self):
+        test_sector = Sector(sector_name="my mining sector", sector_code="min")
+        test_company = Company("A company name", "xyz", sector_object=test_sector)
+        test_company_quote = CompanyQuote(
+            company_object=test_company,
+            date=datetime.now(),
+            open=8.2,
+            high=10.3,
+            low=5.6,
+            close=6.8,
+            volume=21000000,
+        )
+        result = test_company_quote.name
+        self.assertEqual(result, "A company name")
+
+    def test_attr_code(self):
+        test_sector = Sector(sector_name="my mining sector", sector_code="min")
+        test_company = Company("A company name", "xyz", sector_object=test_sector)
+        test_company_quote = CompanyQuote(
+            company_object=test_company,
+            date=datetime.now(),
+            open=8.2,
+            high=10.3,
+            low=5.6,
+            close=6.8,
+            volume=21000000,
+        )
+        result = test_company_quote.code
+        self.assertEqual(result, "xyz")
+
+    def test_attr_company_name(self):
+        test_sector = Sector(sector_name="my mining sector", sector_code="min")
+        test_company = Company("A company name", "xyz", sector_object=test_sector)
+        test_company_quote = CompanyQuote(
+            company_object=test_company,
+            date=datetime.now(),
+            open=8.2,
+            high=10.3,
+            low=5.6,
+            close=6.8,
+            volume=21000000,
+        )
+        result = test_company_quote.company_name
+        self.assertEqual(result, "A company name")
+
+    def test_attr_company_code(self):
+        test_sector = Sector(sector_name="my mining sector", sector_code="min")
+        test_company = Company("A company name", "xyz", sector_object=test_sector)
+        test_company_quote = CompanyQuote(
+            company_object=test_company,
+            date=datetime.now(),
+            open=8.2,
+            high=10.3,
+            low=5.6,
+            close=6.8,
+            volume=21000000,
+        )
+        result = test_company_quote.company_code
+        self.assertEqual(result, "xyz")
+
+    def test_get_open(self):
+        test_sector = Sector(sector_name="my mining sector", sector_code="min")
+        test_company = Company("A company name", "xyz", sector_object=test_sector)
+        test_company_quote = CompanyQuote(
+            company_object=test_company,
+            date=datetime.now(),
+            open=8.2,
+            high=10.3,
+            low=5.6,
+            close=6.8,
+            volume=21000000,
+        )
+        result = test_company_quote.open
+        self.assertEqual(result, 8.2)
+
+    def test_get_high(self):
+        test_sector = Sector(sector_name="my mining sector", sector_code="min")
+        test_company = Company("A company name", "xyz", sector_object=test_sector)
+        test_company_quote = CompanyQuote(
+            company_object=test_company,
+            date=datetime.now(),
+            open=8.2,
+            high=10.3,
+            low=5.6,
+            close=6.8,
+            volume=21000000,
+        )
+        result = test_company_quote.high
+        self.assertEqual(result, 10.3)
+
+    def test_get_low(self):
+        test_sector = Sector(sector_name="my mining sector", sector_code="min")
+        test_company = Company("A company name", "xyz", sector_object=test_sector)
+        test_company_quote = CompanyQuote(
+            company_object=test_company,
+            date=datetime.now(),
+            open=8.2,
+            high=10.3,
+            low=5.6,
+            close=6.8,
+            volume=21000000,
+        )
+        result = test_company_quote.low
+        self.assertEqual(result, 5.6)
+
+    def test_get_close(self):
+        test_sector = Sector(sector_name="my mining sector", sector_code="min")
+        test_company = Company("A company name", "xyz", sector_object=test_sector)
+        test_company_quote = CompanyQuote(
+            company_object=test_company,
+            date=datetime.now(),
+            open=8.2,
+            high=10.3,
+            low=5.6,
+            close=6.8,
+            volume=21000000,
+        )
+        result = test_company_quote.close
+        self.assertEqual(result, 6.8)
+
+    def test_get_volume(self):
+        test_sector = Sector(sector_name="my mining sector", sector_code="min")
+        test_company = Company("A company name", "xyz", sector_object=test_sector)
+        test_company_quote = CompanyQuote(
+            company_object=test_company,
+            date=datetime.now(),
+            open=8.2,
+            high=10.3,
+            low=5.6,
+            close=6.8,
+            volume=21000000,
+        )
+        result = test_company_quote.volume
+        self.assertEqual(result, 21000000)
+
+    def test_get_quote(self):
+        test_sector = Sector(sector_name="my mining sector", sector_code="min")
+        test_company = Company("A company name", "xyz", sector_object=test_sector)
+        test_date = datetime.now()
+        test_company_quote = CompanyQuote(
+            company_object=test_company,
+            date=test_date,
+            open=8.2,
+            high=10.3,
+            low=5.6,
+            close=6.8,
+            volume=21000000,
+        )
+        result = test_company_quote.get_quote()
+        self.assertEqual(result["company_name"], "A company name")
+        self.assertEqual(result["company_code"], "xyz")
+        self.assertEqual(result["date"], test_date)
+        self.assertEqual(result["open"], 8.2)
+        self.assertEqual(result["high"], 10.3)
+        self.assertEqual(result["low"], 5.6)
+        self.assertEqual(result["close"], 6.8)
+        self.assertEqual(result["volume"], 21000000)
+
+
+class TestQuoteCollection(unittest.TestCase):
+    def test_add_quote(self):
         self.assertEqual(True, False)
+
+    def test_filter_by_date(self):
+        self.assertEqual(True, False)
+
+    def test_filter_by_sector_code(self):
+        self.assertEqual(True, False)
+
+    def test_get_quotes(self):
+        self.assertEqual(True, False)
+
+
+class TestSector(unittest.TestCase):
+    def test_attr_sector_name(self):
         test_sector = Sector(
             sector_name=CONST_SECTOR1_NAME, sector_code=CONST_SECTOR1_CODE
         )
-        # company 1 and 2 are different companys but will have quotes on the same date
-        # company 2 will have two quotes each on a different date
-        test_company_1 = Company(
-            company_name=CONST_COMPANY1_COMPANY_NAME,
-            company_code=CONST_COMPANY1_COMPANY_NAME,
-            sector_object=test_sector,
-        )
-        test_company_2 = Company(
-            company_name=CONST_COMPANY2_COMPANY_NAME,
-            company_code=CONST_COMPANY2_COMPANY_NAME,
-            sector_object=test_sector,
-        )
+        result = test_sector.sector_name
+        self.assertEqual(CONST_SECTOR1_NAME, result)
 
-        test_company_quote1 = CompanyQuote(
-            company_object=test_company_1,
-            date=CONST_QUOTE1_DATE,
-            open=10,
-            high=12,
-            low=8,
-            close=11,
-            volume=2000,
+    def test_attr_sector_code(self):
+        test_sector = Sector(
+            sector_name=CONST_SECTOR1_NAME, sector_code=CONST_SECTOR1_CODE
         )
+        result = test_sector.sector_code
+        self.assertEqual(CONST_SECTOR1_CODE, result)
 
-        test_company_quote2 = CompanyQuote(
-            company_object=test_company_1,
-            date=CONST_QUOTE2_DATE,
-            open=10,
-            high=12,
-            low=8,
-            close=11,
-            volume=2000,
+    def test_attr_name(self):
+        test_sector = Sector(
+            sector_name=CONST_SECTOR1_NAME, sector_code=CONST_SECTOR1_CODE
         )
+        result = test_sector.name
+        self.assertEqual(CONST_SECTOR1_NAME, result)
 
-        test_company_quote3 = CompanyQuote(
-            company_object=test_company_1,
-            date=CONST_QUOTE1_DATE,
-            open=10,
-            high=12,
-            low=8,
-            close=11,
-            volume=2000,
+    def test_attr_code(self):
+        test_sector = Sector(
+            sector_name=CONST_SECTOR1_NAME, sector_code=CONST_SECTOR1_CODE
+        )
+        result = test_sector.code
+        self.assertEqual(CONST_SECTOR1_CODE, result)
+
+    def test_attr_sector_quote_length(self):
+        test_collection = generate_sector_collection(
+            sector_count=CONST_TEST_SECTOR_COUNT,
+            company_count=CONST_TEST_COMPANY_COUNT,
+            sector_quotes=CONST_TEST_SECTOR_QUOTES,
+            company_quotes=CONST_TEST_COMPANY_QUOTES,
         )
 
-        # result = test_company.get_quotes().filter(date=CONST_QUOTE1_DATE)
-        # self.assertEqual(CONST_company, result[0].company_code)
-        # self.assertEqual(CONST_Q1_QUOTE_DATE, result[0].date)
-        # self.assertEqual(10, result[0].open)
+        for sector in test_collection._sectors:
+            self.assertEqual(
+                test_collection._sectors[sector].sector_quote_length,
+                CONST_TEST_SECTOR_QUOTES,
+            )
 
-    def test_get_quotes_filtered_by_company_code(self):
-        self.assertEqual(True, False)
+    def test_attr_company_length(self):
+        test_collection = generate_sector_collection(
+            sector_count=CONST_TEST_SECTOR_COUNT,
+            company_count=CONST_TEST_COMPANY_COUNT,
+            sector_quotes=CONST_TEST_SECTOR_QUOTES,
+            company_quotes=CONST_TEST_COMPANY_QUOTES,
+        )
 
-    def test_get_quotes_filtered_by_company_code_filtered_by_date(self):
-        self.assertEqual(True, False)
+        for sector in test_collection._sectors:
+            self.assertEqual(
+                test_collection._sectors[sector].company_length,
+                CONST_TEST_COMPANY_COUNT,
+            )
 
-    def test_diff(self):
-        self.assertEqual(True, False)
+    def test_attr_company_quote_length(self):
+        test_collection = generate_sector_collection(
+            sector_count=CONST_TEST_SECTOR_COUNT,
+            company_count=CONST_TEST_COMPANY_COUNT,
+            sector_quotes=CONST_TEST_SECTOR_QUOTES,
+            company_quotes=CONST_TEST_COMPANY_QUOTES,
+        )
+
+        for sector in test_collection._sectors:
+            for company in test_collection._sectors[sector]._companies:
+                self.assertEqual(
+                    test_collection._sectors[sector].company_quote_length,
+                    CONST_TEST_COMPANY_QUOTES * CONST_TEST_COMPANY_COUNT,
+                )
+
+    def test_get_sector_quote_no_filter(self):
+        test_collection = generate_sector_collection(
+            sector_count=CONST_TEST_SECTOR_COUNT,
+            company_count=CONST_TEST_COMPANY_COUNT,
+            sector_quotes=CONST_TEST_SECTOR_QUOTES,
+            company_quotes=CONST_TEST_COMPANY_QUOTES,
+        )
+
+        # todo make this much better - test fixture or something
+        # this is so dodgey. because i'm randomly generating the sector names and company names
+        # and because i know that all sector quotes and company quotes are the same length
+        # basically just get the first company from the first sector and use it as the thing we test
+        quotes_collected = 0
+        for s in test_collection._sectors:
+            quote_result = test_collection.get_sector_by_code(
+                sector_code=s
+            ).get_sector_quote()
+            self.assertEqual(len(quote_result), CONST_TEST_SECTOR_QUOTES)
+            quotes_collected += len(quote_result)
+
+        self.assertEqual(
+            quotes_collected,
+            CONST_TEST_SECTOR_COUNT * CONST_TEST_SECTOR_QUOTES,
+        )
+
+    def test_get_sector_quote_filtered_by_date(self):
+        test_collection = generate_sector_collection(
+            sector_count=CONST_TEST_SECTOR_COUNT,
+            company_count=CONST_TEST_COMPANY_COUNT,
+            sector_quotes=CONST_TEST_SECTOR_QUOTES,
+            company_quotes=CONST_TEST_COMPANY_QUOTES,
+        )
+
+        # todo make this much better - test fixture or something
+        # this is so dodgey. because i'm randomly generating the sector names and company names
+        # and because i know that all sector quotes and company quotes are the same length
+        # basically just get the first company from the first sector and use it as the thing we test
+        quotes_collected = 0
+        for s in test_collection._sectors:
+            quote_result = test_collection.get_sector_by_code(
+                sector_code=s
+            ).get_sector_quote(date=datetime.strptime(f"03/10/20", "%d/%m/%y"))
+            self.assertEqual(len(quote_result), 1)
+            quotes_collected += len(quote_result)
+
+        self.assertEqual(
+            quotes_collected,
+            CONST_TEST_SECTOR_COUNT,
+        )
+
+    def test_get_sector_quote_filtered_by_date_start(self):
+        test_collection = generate_sector_collection(
+            sector_count=CONST_TEST_SECTOR_COUNT,
+            company_count=CONST_TEST_COMPANY_COUNT,
+            sector_quotes=CONST_TEST_SECTOR_QUOTES,
+            company_quotes=CONST_TEST_COMPANY_QUOTES,
+        )
+
+        # todo make this much better - test fixture or something
+        # this is so dodgey. because i'm randomly generating the sector names and company names
+        # and because i know that all sector quotes and company quotes are the same length
+        # basically just get the first company from the first sector and use it as the thing we test
+        quotes_collected = 0
+        for s in test_collection._sectors:
+            quote_result = test_collection.get_sector_by_code(
+                sector_code=s
+            ).get_sector_quote(date_from=datetime.strptime(f"03/10/20", "%d/%m/%y"))
+            self.assertEqual(len(quote_result), 3)
+            quotes_collected += len(quote_result)
+
+        self.assertEqual(
+            quotes_collected,
+            CONST_TEST_SECTOR_COUNT * 3,
+        )
+
+    def test_get_sector_quote_filtered_by_date_end(self):
+        test_collection = generate_sector_collection(
+            sector_count=CONST_TEST_SECTOR_COUNT,
+            company_count=CONST_TEST_COMPANY_COUNT,
+            sector_quotes=CONST_TEST_SECTOR_QUOTES,
+            company_quotes=CONST_TEST_COMPANY_QUOTES,
+        )
+
+        # todo make this much better - test fixture or something
+        # this is so dodgey. because i'm randomly generating the sector names and company names
+        # and because i know that all sector quotes and company quotes are the same length
+        # basically just get the first company from the first sector and use it as the thing we test
+        quotes_collected = 0
+        for s in test_collection._sectors:
+            quote_result = test_collection.get_sector_by_code(
+                sector_code=s
+            ).get_sector_quote(date_to=datetime.strptime(f"02/10/20", "%d/%m/%y"))
+            self.assertEqual(len(quote_result), 2)
+            quotes_collected += len(quote_result)
+
+        self.assertEqual(
+            quotes_collected,
+            CONST_TEST_SECTOR_COUNT * 2,
+        )
+
+    def test_get_sector_quote_filtered_by_date_start_and_date_end(self):
+        test_collection = generate_sector_collection(
+            sector_count=CONST_TEST_SECTOR_COUNT,
+            company_count=CONST_TEST_COMPANY_COUNT,
+            sector_quotes=CONST_TEST_SECTOR_QUOTES,
+            company_quotes=CONST_TEST_COMPANY_QUOTES,
+        )
+
+        # todo make this much better - test fixture or something
+        # this is so dodgey. because i'm randomly generating the sector names and company names
+        # and because i know that all sector quotes and company quotes are the same length
+        # basically just get the first company from the first sector and use it as the thing we test
+        quotes_collected = 0
+        for s in test_collection._sectors:
+            quote_result = test_collection.get_sector_by_code(
+                sector_code=s
+            ).get_sector_quote(
+                date_from=datetime.strptime(f"02/10/20", "%d/%m/%y"),
+                date_to=datetime.strptime(f"04/10/20", "%d/%m/%y"),
+            )
+            self.assertEqual(len(quote_result), 3)
+            quotes_collected += len(quote_result)
+
+        self.assertEqual(
+            quotes_collected,
+            CONST_TEST_SECTOR_COUNT * 3,
+        )
+
+    def test_get_company_quote_no_filter(self):
+        test_collection = generate_sector_collection(
+            sector_count=CONST_TEST_SECTOR_COUNT,
+            company_count=CONST_TEST_COMPANY_COUNT,
+            sector_quotes=CONST_TEST_SECTOR_QUOTES,
+            company_quotes=CONST_TEST_COMPANY_QUOTES,
+        )
+
+        # todo make this much better - test fixture or something
+        # this is so dodgey. because i'm randomly generating the sector names and company names
+        # and because i know that all sector quotes and company quotes are the same length
+        # basically just get the first company from the first sector and use it as the thing we test
+        quotes_collected = 0
+        for s in test_collection._sectors:
+            quote_result = test_collection.get_sector_by_code(
+                sector_code=s
+            ).get_company_quote()
+
+            # returns multidimensional array: [company_code][some date]
+            self.assertEqual(len(quote_result), CONST_TEST_COMPANY_COUNT)
+            for company in quote_result:
+                self.assertEqual(len(quote_result[company]), CONST_TEST_COMPANY_QUOTES)
+                quotes_collected += len(quote_result[company])
+
+        self.assertEqual(
+            quotes_collected,
+            CONST_TEST_SECTOR_COUNT
+            * CONST_TEST_COMPANY_COUNT
+            * CONST_TEST_COMPANY_QUOTES,
+        )
+
+    def test_get_company_quote_filtered_by_date(self):
+        test_collection = generate_sector_collection(
+            sector_count=CONST_TEST_SECTOR_COUNT,
+            company_count=CONST_TEST_COMPANY_COUNT,
+            sector_quotes=CONST_TEST_SECTOR_QUOTES,
+            company_quotes=CONST_TEST_COMPANY_QUOTES,
+        )
+
+        # todo make this much better - test fixture or something
+        # this is so dodgey. because i'm randomly generating the sector names and company names
+        # and because i know that all sector quotes and company quotes are the same length
+        # basically just get the first company from the first sector and use it as the thing we test
+        quotes_collected = 0
+        for s in test_collection._sectors:
+            quote_result = test_collection.get_sector_by_code(
+                sector_code=s
+            ).get_company_quote(date=datetime.strptime(f"03/10/20", "%d/%m/%y"))
+
+            # returns multidimensional array: [company_code][some date]
+            self.assertEqual(len(quote_result), CONST_TEST_COMPANY_COUNT)
+            for company in quote_result:
+                self.assertEqual(len(quote_result[company]), 1)
+                quotes_collected += len(quote_result[company])
+
+        self.assertEqual(
+            quotes_collected,
+            CONST_TEST_SECTOR_COUNT * CONST_TEST_COMPANY_COUNT,
+        )
+
+    def test_get_company_quote_filtered_by_date_start(self):
+        test_collection = generate_sector_collection(
+            sector_count=CONST_TEST_SECTOR_COUNT,
+            company_count=CONST_TEST_COMPANY_COUNT,
+            sector_quotes=CONST_TEST_SECTOR_QUOTES,
+            company_quotes=CONST_TEST_COMPANY_QUOTES,
+        )
+
+        # todo make this much better - test fixture or something
+        # this is so dodgey. because i'm randomly generating the sector names and company names
+        # and because i know that all sector quotes and company quotes are the same length
+        # basically just get the first company from the first sector and use it as the thing we test
+        quotes_collected = 0
+        for s in test_collection._sectors:
+            quote_result = test_collection.get_sector_by_code(
+                sector_code=s
+            ).get_company_quote(date_from=datetime.strptime(f"03/10/20", "%d/%m/%y"))
+
+            # returns multidimensional array: [company_code][some date]
+            self.assertEqual(len(quote_result), CONST_TEST_COMPANY_COUNT)
+            for company in quote_result:
+                self.assertEqual(len(quote_result[company]), 3)
+                quotes_collected += len(quote_result[company])
+
+        self.assertEqual(
+            quotes_collected,
+            CONST_TEST_SECTOR_COUNT * CONST_TEST_COMPANY_COUNT * 3,
+        )
+
+    def test_get_company_quote_filtered_by_date_end(self):
+        test_collection = generate_sector_collection(
+            sector_count=CONST_TEST_SECTOR_COUNT,
+            company_count=CONST_TEST_COMPANY_COUNT,
+            sector_quotes=CONST_TEST_SECTOR_QUOTES,
+            company_quotes=CONST_TEST_COMPANY_QUOTES,
+        )
+
+        # todo make this much better - test fixture or something
+        # this is so dodgey. because i'm randomly generating the sector names and company names
+        # and because i know that all sector quotes and company quotes are the same length
+        # basically just get the first company from the first sector and use it as the thing we test
+        quotes_collected = 0
+        for s in test_collection._sectors:
+            quote_result = test_collection.get_sector_by_code(
+                sector_code=s
+            ).get_company_quote(date_to=datetime.strptime(f"02/10/20", "%d/%m/%y"))
+
+            # returns multidimensional array: [company_code][some date]
+            self.assertEqual(len(quote_result), CONST_TEST_COMPANY_COUNT)
+            for company in quote_result:
+                self.assertEqual(len(quote_result[company]), 2)
+                quotes_collected += len(quote_result[company])
+
+        self.assertEqual(
+            quotes_collected,
+            CONST_TEST_SECTOR_COUNT * CONST_TEST_COMPANY_COUNT * 2,
+        )
+
+    def test_get_company_quote_filtered_by_date_start_and_date_end(
+        self,
+    ):
+        test_collection = generate_sector_collection(
+            sector_count=CONST_TEST_SECTOR_COUNT,
+            company_count=CONST_TEST_COMPANY_COUNT,
+            sector_quotes=CONST_TEST_SECTOR_QUOTES,
+            company_quotes=CONST_TEST_COMPANY_QUOTES,
+        )
+
+        # todo make this much better - test fixture or something
+        # this is so dodgey. because i'm randomly generating the sector names and company names
+        # and because i know that all sector quotes and company quotes are the same length
+        # basically just get the first company from the first sector and use it as the thing we test
+        quotes_collected = 0
+        for s in test_collection._sectors:
+            quote_result = test_collection.get_sector_by_code(
+                sector_code=s
+            ).get_company_quote(
+                date_from=datetime.strptime(f"02/10/20", "%d/%m/%y"),
+                date_to=datetime.strptime(f"04/10/20", "%d/%m/%y"),
+            )
+
+            # returns multidimensional array: [company_code][some date]
+            self.assertEqual(len(quote_result), CONST_TEST_COMPANY_COUNT)
+            for company in quote_result:
+                self.assertEqual(len(quote_result[company]), 3)
+                quotes_collected += len(quote_result[company])
+
+        self.assertEqual(
+            quotes_collected,
+            CONST_TEST_SECTOR_COUNT * CONST_TEST_COMPANY_COUNT * 3,
+        )
 
 
 class TestSectorCollection(unittest.TestCase):
-    def test_property_length(self):
+    def test_attr_length(self):
         test_sector_collection = generate_sector_collection(
             sector_count=CONST_TEST_SECTOR_COUNT,
             company_count=CONST_TEST_COMPANY_COUNT,
@@ -393,10 +1021,10 @@ class TestSectorCollection(unittest.TestCase):
 
         self.assertEqual(test_sector_collection.length, CONST_TEST_SECTOR_COUNT)
 
-    def test_property_name(self):
+    def test_attr_name(self):
         test_sector_collection = SectorCollection("asx test")
         test_sector_collection.add_sector(
-            Sector(sector_name="my mining company", sector_code="min")
+            Sector(sector_name="my mining sector", sector_code="min")
         )
 
         self.assertEqual(test_sector_collection.name, "asx test")
@@ -404,121 +1032,183 @@ class TestSectorCollection(unittest.TestCase):
     def test_add_sector(self):
         test_sector_collection = SectorCollection("asx test")
         test_sector_collection.add_sector(
-            Sector(sector_name="my mining company", sector_code="min")
+            Sector(sector_name="my mining sector", sector_code="min")
         )
 
         self.assertEqual(test_sector_collection.length, 1)
         self.assertEqual(
-            test_sector_collection._sectors["min"].sector_name, "my mining company"
+            test_sector_collection._sectors["min"].sector_name, "my mining sector"
         )
         self.assertEqual(test_sector_collection._sectors["min"].sector_code, "min")
 
     def test_get_sector_by_code(self):
         test_sector_collection = SectorCollection("asx test")
-        test_sector = Sector(sector_name="my mining company", sector_code="min")
+        test_sector = Sector(sector_name="my mining sector", sector_code="min")
         test_sector_collection.add_sector(test_sector)
 
         self.assertEqual(test_sector_collection.get_sector_by_code("min"), test_sector)
 
     def test_get_quotes(self):
         test_sector_collection = SectorCollection("asx test")
-        test_sector = Sector(sector_name="my mining company", sector_code="min")
+        test_sector = Sector(sector_name="my mining sector", sector_code="min")
         test_sector_collection.add_sector(test_sector)
 
         result = test_sector_collection.get_quotes()
 
-        self.assertEqual(
-            result,
+        self.assertEqual(result, False)
+
+    def test_filter(self):
+        self.assertEqual(True, False)
+
+
+class TestSectorQuote(unittest.TestCase):  # done
+    def test_attr_name(self):
+        test_sector = Sector(sector_name="my mining sector", sector_code="min")
+        test_sector_quote = SectorQuote(
+            sector_object=test_sector,
+            date=datetime.now(),
+            open=8.2,
+            high=10.3,
+            low=5.6,
+            close=6.8,
+            volume=21000000,
         )
+        result = test_sector_quote.name
+        self.assertEqual(result, "my mining sector")
 
-    def test_filter(self):
-        ...
+    def test_attr_code(self):
+        test_sector = Sector(sector_name="my mining sector", sector_code="min")
+        test_sector_quote = SectorQuote(
+            sector_object=test_sector,
+            date=datetime.now(),
+            open=8.2,
+            high=10.3,
+            low=5.6,
+            close=6.8,
+            volume=21000000,
+        )
+        result = test_sector_quote.code
+        self.assertEqual(result, "min")
 
+    def test_attr_company_name(self):
+        test_sector = Sector(sector_name="my mining sector", sector_code="min")
+        test_sector_quote = SectorQuote(
+            sector_object=test_sector,
+            date=datetime.now(),
+            open=8.2,
+            high=10.3,
+            low=5.6,
+            close=6.8,
+            volume=21000000,
+        )
+        result = test_sector_quote.sector_name
+        self.assertEqual(result, "my mining sector")
 
-class TestCompanyCollection(unittest.TestCase):
-    def test_add_Company(self):
-        ...
+    def test_attr_company_code(self):
+        test_sector = Sector(sector_name="my mining sector", sector_code="min")
+        test_sector_quote = SectorQuote(
+            sector_object=test_sector,
+            date=datetime.now(),
+            open=8.2,
+            high=10.3,
+            low=5.6,
+            close=6.8,
+            volume=21000000,
+        )
+        result = test_sector_quote.sector_code
+        self.assertEqual(result, "min")
 
-    def test_get_company_by_code(self):
-        ...
+    def test_get_open(self):
+        test_sector = Sector(sector_name="my mining sector", sector_code="min")
+        test_sector_quote = SectorQuote(
+            sector_object=test_sector,
+            date=datetime.now(),
+            open=8.2,
+            high=10.3,
+            low=5.6,
+            close=6.8,
+            volume=21000000,
+        )
+        result = test_sector_quote.open
+        self.assertEqual(result, 8.2)
 
-    def test_get_quotes(self):
-        ...
+    def test_get_high(self):
+        test_sector = Sector(sector_name="my mining sector", sector_code="min")
+        test_sector_quote = SectorQuote(
+            sector_object=test_sector,
+            date=datetime.now(),
+            open=8.2,
+            high=10.3,
+            low=5.6,
+            close=6.8,
+            volume=21000000,
+        )
+        result = test_sector_quote.high
+        self.assertEqual(result, 10.3)
 
-    def test_filter(self):
-        ...
+    def test_get_low(self):
+        test_sector = Sector(sector_name="my mining sector", sector_code="min")
+        test_sector_quote = SectorQuote(
+            sector_object=test_sector,
+            date=datetime.now(),
+            open=8.2,
+            high=10.3,
+            low=5.6,
+            close=6.8,
+            volume=21000000,
+        )
+        result = test_sector_quote.low
+        self.assertEqual(result, 5.6)
 
+    def test_get_close(self):
+        test_sector = Sector(sector_name="my mining sector", sector_code="min")
+        test_sector_quote = SectorQuote(
+            sector_object=test_sector,
+            date=datetime.now(),
+            open=8.2,
+            high=10.3,
+            low=5.6,
+            close=6.8,
+            volume=21000000,
+        )
+        result = test_sector_quote.close
+        self.assertEqual(result, 6.8)
 
-class TestQuoteCollection(unittest.TestCase):
-    def test_add_quote(self):
-        ...
+    def test_get_volume(self):
+        test_sector = Sector(sector_name="my mining sector", sector_code="min")
+        test_sector_quote = SectorQuote(
+            sector_object=test_sector,
+            date=datetime.now(),
+            open=8.2,
+            high=10.3,
+            low=5.6,
+            close=6.8,
+            volume=21000000,
+        )
+        result = test_sector_quote.volume
+        self.assertEqual(result, 21000000)
 
-    def test_filter_by_date(self):
-        ...
+    def test_get_quote(self):
+        test_sector = Sector(sector_name="my mining sector", sector_code="min")
+        test_date = datetime.now()
+        test_sector_quote = SectorQuote(
+            sector_object=test_sector,
+            date=test_date,
+            open=8.2,
+            high=10.3,
+            low=5.6,
+            close=6.8,
+            volume=21000000,
+        )
+        result = test_sector_quote.volume
+        self.assertEqual(result, 21000000)
 
-    def test_filter_by_sector_code(self):
-        ...
-
-    def test_get_quotes(self):
-        ...
-
-
-class TestSectorQuote(unittest.TestCase):
-    def test_get_open():
-        assert (True, False)
-
-    def test_get_high():
-        assert (True, False)
-
-    def test_get_low():
-        assert (True, False)
-
-    def test_get_close():
-        assert (True, False)
-
-    def test_get_volume():
-        assert (True, False)
-
-
-class TestCompanyQuote(unittest.TestCase):
-    def test_get_open():
-        assert (True, False)
-
-    def test_get_high():
-        assert (True, False)
-
-    def test_get_low():
-        assert (True, False)
-
-    def test_get_close():
-        assert (True, False)
-
-    def test_get_volume():
-        assert (True, False)
-
-
-# companys.get_quotes()
-#                    .filter(date=)
-#                    .filter(company_code=)
-#
-
-# yfinance gives me a list of quotes
-# convert them in to company objects
-# sql gives me a list of quotes
-# convert them in to company objects
-# diff()
-
-# deprecated - probably won't use collections - collapse them in to companys/sectors
-# class TestSectorCollection(unittest.TestCase):
-#    def test_init(self):
-#        test_sector = quote.Sector(CONST_SECTOR1_NAME, CONST_SECTOR1_CODE)
-#        test_sectorcollection = quote.SectorCollection()
-#        self.assertEqual(0, test_sectorcollection.count())
-#
-#    def test_add(self):
-#        test_sector = quote.Sector(CONST_SECTOR1_NAME, CONST_SECTOR1_CODE)
-#        test_sectorcollection = quote.SectorCollection()
-#        test_sectorcollection.add(test_sector)
-#        self.assertEqual(1, test_sectorcollection.count())
-#        test_sectorcollection.add(test_sector)
-#        self.assertEqual(2, test_sectorcollection.count())
+        result = test_sector_quote.get_quote()
+        self.assertEqual(result["sector_name"], "my mining sector")
+        self.assertEqual(result["sector_code"], "min")
+        self.assertEqual(result["date"], test_date)
+        self.assertEqual(result["open"], 8.2)
+        self.assertEqual(result["high"], 10.3)
+        self.assertEqual(result["low"], 5.6)
+        self.assertEqual(result["close"], 6.8)
+        self.assertEqual(result["volume"], 21000000)

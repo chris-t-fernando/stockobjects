@@ -3,6 +3,17 @@ from datetime import datetime
 
 
 class CompanyQuote(BaseQuote):
+    date: datetime
+    open: float
+    high: float
+    low: float
+    close: float
+    volume: int
+    # company_name:str
+    # company_code:str
+    # name:str
+    # code:str
+
     def __init__(
         self,
         company_object,
@@ -13,6 +24,7 @@ class CompanyQuote(BaseQuote):
         close: float,
         volume: int,
     ):
+        self._parent = company_object
         super().__init__(
             parent=company_object,
             date=date,
@@ -37,6 +49,7 @@ class CompanyQuote(BaseQuote):
 
     @property
     def company_name(self) -> str:
+        print(self._parent.name)
         return self._parent.name
 
     @property
