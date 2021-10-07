@@ -36,3 +36,4 @@ my_collection.get_sector(my_sector.sector_code).add_company(my_company)</code>
 
 From here, instantiate SectorQuotes and Company quotes
 And then start querying them
+
