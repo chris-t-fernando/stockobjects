@@ -9,7 +9,7 @@ from stockobjectsexceptions import (
 from sectorquote import SectorQuote
 from companyquote import CompanyQuote
 from company import Company
-from typing import Dict
+from typing import Dict, List
 from parsing import DateParser
 
 # DONE
@@ -102,7 +102,7 @@ class Sector:
         self._quotes[new_quote.date] = new_quote
         return True
 
-    def get_company_by_code(self, company_code: str) -> Company:
+    def get_company(self, company_code: str) -> Company:
         # iterate through sectors, looking for the company
         if company_code in self._companies:
             return self._companies[company_code]
@@ -136,10 +136,10 @@ class Sector:
 
     def get_company_quote(
         self,
+        company_codes: List[str] = None,
         date_from: datetime = None,
         date_to: datetime = None,
         date: datetime = None,
-        company_code: str = None,
     ) -> Dict[datetime, CompanyQuote]:
 
         try:
@@ -147,14 +147,32 @@ class Sector:
         except Exception as e:
             raise
 
-        if company_code != None and company_code not in self._companies:
-            raise CompanyDoesNotExist(company_code=company_code)
+        # if company_codes is set, check that its a list
+        # then check the requested companies are valid
+        if company_codes != None:
+            if not isinstance(company_codes, list):
+                raise TypeError(
+                    f"company_codes must be either None or List[str], instead of {type(company_codes)}"
+                )
+
+            for company_code in company_codes:
+                if company_code not in self._companies:
+                    raise CompanyDoesNotExist(company_code=company_code)
 
         matched_quotes = {}
 
         for company in self._companies:
-            matched_quotes[company] = self._companies[company].get_quote(date_from=date_from, date_to=date_to, date=date)
-            
+            company_match = False
+            if company_codes == None:
+                company_match = True
+            elif company in company_codes:
+                company_match = True
+
+            if company_match:
+                matched_quotes[company] = self._companies[company].get_quote(
+                    date_from=date_from, date_to=date_to, date=date
+                )
+
         return matched_quotes
 
     def add_company_quote(

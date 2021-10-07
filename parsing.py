@@ -1,20 +1,5 @@
 from datetime import datetime
-
-
-class InvalidDateOptions(Exception):
-    def __init__(self):
-        super().__init__(
-            self,
-            f"Invalid combination of parameters.  Either set date_from and/or date_to, OR set date",
-        )
-
-
-class DateToIsBeforeDateFrom(Exception):
-    def __init__(self, date_from: datetime, date_to: datetime):
-        super().__init__(
-            self,
-            f"End Date of {date_to} is before Start Date of {date_from}",
-        )
+from stockobjectsexceptions import InvalidDateOptions
 
 
 class DateParser:
@@ -38,7 +23,7 @@ class DateParser:
         # permutations first
         if date_from == None and date_to == None and date == None:
             # return all
-            picked_from = datetime.strptime("01-01-1970 00:00:00", "%d-%m-%Y %H:%M:%S")
+            picked_from = datetime.strptime("01-01-1970", "%d-%m-%Y")
             picked_to = datetime.now()
         elif date_from != None and date_to == None and date == None:
             # return all since
@@ -55,7 +40,7 @@ class DateParser:
         elif date_from == None and date_to != None and date != None:
             raise InvalidDateOptions
         elif date_from == None and date_to != None and date == None:
-            picked_from = datetime.strptime("01-01-1970 00:00:00", "%d-%m-%Y %H:%M:%S")
+            picked_from = datetime.strptime("01-01-1970", "%d-%m-%Y")
             picked_to = date_to
         elif date_from == None and date_to == None and date != None:
             picked_from = date
@@ -75,7 +60,7 @@ class DateParser:
         # now we've picked the dates we're going to use, check if they make sense: picked_from is earlier than picked_to
         if picked_from > picked_to:
             # bad - to is before from
-            raise DateToIsBeforeDateFrom(date_from=date_from, date_to=date_to)
+            raise ValueError(f"Date_from must be before date_to.")
 
         # good
         self.date_from = picked_from
