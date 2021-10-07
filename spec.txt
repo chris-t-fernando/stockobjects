@@ -23,7 +23,7 @@
 # Sector->add_company(company Company) -> bool
 # Sector->get_company(company_code Str) -> Company
 # Sector->add_company_quote(all the things) -> bool
-# Sector->add_company_quote_object(quote SectorQuote) -> bool
+# Sector->add_company_quote_object(quote CompanyQuote) -> bool
 # Sector->get_company_quote(company_code Str=None) -> QuoteCollection
 # Sector->sector_quote_length() -> int
 # Sector->company_length() -> int

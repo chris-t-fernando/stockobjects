@@ -1,16 +1,16 @@
 import unittest
 from unittest.mock import patch
 from datetime import datetime, timedelta
-from stockobjectsexceptions import (
+from stockobjects.stockobjectsexceptions import (
     QuoteAlreadyExists,
     CompanyDoesNotExist,
     SectorDoesNotExist,
 )
-from company import Company
-from sector import Sector
-from companyquote import CompanyQuote
-from sectorquote import SectorQuote
-from sectorcollection import SectorCollection
+from stockobjects.company import Company
+from stockobjects.sector import Sector
+from stockobjects.companyquote import CompanyQuote
+from stockobjects.sectorquote import SectorQuote
+from stockobjects.sectorcollection import SectorCollection
 
 # company, SectorQuote, companyQuote
 from datetime import datetime
@@ -52,7 +52,7 @@ class SetupObject:
             random.choices(string.ascii_uppercase + string.digits, k=10)
         )
         code = "sectorcode-" + "".join(
-            random.choices(string.ascii_uppercase + string.digits, k=3)
+            random.choices(string.ascii_uppercase + string.digits, k=4)
         )
         self.this_sector = Sector(sector_name=name, sector_code=code)
         return self.this_sector
@@ -62,7 +62,7 @@ class SetupObject:
             random.choices(string.ascii_uppercase + string.digits, k=10)
         )
         code = "companycode-" + "".join(
-            random.choices(string.ascii_uppercase + string.digits, k=3)
+            random.choices(string.ascii_uppercase + string.digits, k=4)
         )
 
         self.this_company = Company(
