@@ -61,7 +61,12 @@ class Sector:
         if new_company in self._companies.keys():
             raise CompanyAlreadyExists(company_code=new_company.company_code)
 
+        # hold on to it in this sector's companies dict
         self._companies[new_company.company_code] = new_company
+
+        # but also tell the company about the sector it belongs to
+        new_company.sector_object = self
+
         return True
 
     def add_sector_quote(

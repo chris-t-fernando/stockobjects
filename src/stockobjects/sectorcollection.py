@@ -12,12 +12,11 @@ from stockobjects.stockobjectsexceptions import (
 )
 from stockobjects.company import Company
 from stockobjects.parsing import DateParser
-
+import json
 
 
 class SectorCollection:
     # dict with sector_code as key, Sector object as value
-    # _companies: Dict[str, Company]
     _sectors: Dict[str, Sector]
     _quotes: Dict[datetime, SectorQuote]
     _name: str
@@ -52,8 +51,7 @@ class SectorCollection:
             if company_code in self._sectors[this_sector]._companies:
                 return self._sectors[this_sector]._companies[company_code]
 
-        # didn't find it. not really an exception though
-        return False
+        raise CompanyDoesNotExist(company_code=company_code)
 
     @property
     def length(self) -> int:
@@ -159,3 +157,160 @@ class SectorCollection:
 
         # otherwise return what we found
         return matched_quotes
+
+    def _validate_sqs(self, payload: dict) -> bool:
+        if not "Records" in payload.keys():
+            raise Exception("No Records key in event.  Failing")
+
+        # for each recrord
+        for record in payload["Records"]:
+            try:
+                # does this key exist?
+                messageType = record["messageAttributes"]["QuoteType"]["stringValue"]
+            except Exception as e:
+                raise Exception("Unable to find quoteType in message.  Failing")
+
+            # and if it does, is it a valid value?
+            if messageType != "stock" and messageType != "sector":
+                raise Exception(
+                    f"quoteType is invalid.  Expected either 'sector' or 'stock', instead found {messageType}.  Failing"
+                )
+
+            # is it valid json?
+            try:
+                listOfQuotes = json.loads(record["body"])
+            except:
+                raise
+
+            # and if it is, is there a key for quoteObject?
+            if not "quoteObject" in listOfQuotes.keys():
+                raise Exception("Unable to find quoteObject in payload")
+
+            # and are there any quotes?
+            if not isinstance(listOfQuotes["quoteObject"], list):
+                raise Exception("No quotes in quoteObject")
+
+            if len(listOfQuotes["quoteObject"]) == 0:
+                raise Exception("No quotes in quoteObject")
+
+        # got here without raising an Exception so the input is good
+        return True
+
+    def load_sqs(self, payload: str) -> bool:
+        # validate the payload per my custom formatting
+        try:
+            self._validate_sqs(payload=payload)
+        except:
+            raise
+
+        # todo hacky
+        boilerplate_sector = Sector("Boilerplate", "Boilerplate")
+        self.add_sector(new_sector=boilerplate_sector)
+
+        # okay so its valid. now you need to loop through
+        for record in payload["Records"]:
+            # hold on to the message type
+            messageType = record["messageAttributes"]["QuoteType"]["stringValue"]
+
+            # read the embedded json in the body key
+            this_quote_collection = json.loads(record["body"])
+
+            if messageType == "sector":
+                # there can be more than one quote object per record
+                for this_quote in this_quote_collection["quoteObject"]:
+                    # do we already have this sector?
+                    try:
+                        this_sector = self.get_sector(sector_code=this_quote["sector_code"])
+                    except:
+                        # new sector, so instantiate it as an object and add it to the collection
+                        this_sector = Sector(
+                            "boilerplate sector name", this_quote["sector_code"]
+                        )
+                        self.add_sector(new_sector=this_sector)
+
+                    # create a quote object
+                    try:
+                        date = this_quote["quote_date"]
+                        open = this_quote["open"]
+                        high = this_quote["high"]
+                        low = this_quote["low"]
+                        close = this_quote["close"]
+                        volume = this_quote["volume"]
+
+                        new_quote = SectorQuote(
+                            sector_object=this_sector,
+                            date=date,
+                            open=open,
+                            high=high,
+                            low=low,
+                            close=close,
+                            volume=volume,
+                        )
+                    except:
+                        # new sector quote is bad - barf? log? not sure what I want to do with this. json.loads barfs so I guess I should too?
+                        raise
+
+                    try:
+                        self.get_sector(
+                            sector_code=this_quote["sector_code"]
+                        ).add_sector_quote_object(new_quote=new_quote)
+                    except:
+                        # barfed because there was already a quote for this date?  bad types?
+                        raise
+
+            # company - stock is an old name I used at the beginning of this whole palava
+            elif messageType == "stock":
+                # there can be more than one quote object per record
+                for this_quote in this_quote_collection["quoteObject"]:
+                    # do we already have this company?
+                    try:
+                        this_company = self.get_company(
+                            company_code=this_quote["stock_code"]
+                        )
+                    except CompanyDoesNotExist:
+                        # new sector, so instantiate it as an object and add it to the collection
+                        this_company = Company(
+                            company_name="boilerplate company name",
+                            company_code=this_quote["stock_code"],
+                        )
+
+                        # hacky - company quotes don't specify the sector they belong to, so orphan them
+                        self.get_sector(
+                            sector_code=boilerplate_sector.sector_code
+                        ).add_company(new_company=this_company)
+                    except:
+                        raise
+
+                    # create a quote object
+                    try:
+                        date = this_quote["quote_date"]
+                        open = this_quote["open"]
+                        high = this_quote["high"]
+                        low = this_quote["low"]
+                        close = this_quote["close"]
+                        volume = this_quote["volume"]
+
+                        new_quote = CompanyQuote(
+                            company_object=this_company,
+                            date=date,
+                            open=open,
+                            high=high,
+                            low=low,
+                            close=close,
+                            volume=volume,
+                        )
+
+                    except:
+                        # new sector quote is bad - barf? log? not sure what I want to do with this. json.loads barfs so I guess I should too?
+                        raise
+
+                    try:
+                        self.get_company(
+                            company_code=this_quote["stock_code"]
+                        ).add_quote_object(new_quote=new_quote)
+                    except:
+                        # barfed because there was already a quote for this date?  bad types?
+                        raise
+                    
+        # if we got here, it was successful
+        return True

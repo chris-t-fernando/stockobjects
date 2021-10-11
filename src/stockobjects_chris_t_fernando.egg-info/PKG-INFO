@@ -1,3 +1,20 @@
+Metadata-Version: 2.1
+Name: stockobjects-chris-t-fernando
+Version: 0.0.4
+Summary: A set of basic objects for storing and querying stock market company and sectors
+Home-page: https://github.com/chris-t-fernando/stockobjects
+Author: Chris Fernando
+Author-email: c.fernando@optusnet.com.au
+License: UNKNOWN
+Project-URL: Bug Tracker, https://github.com/chris-t-fernando/stockobjects/issues
+Platform: UNKNOWN
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.6
+Description-Content-Type: text/markdown
+License-File: LICENSE
+
 # stockobjects
 A simple set of objects for representing stock and sector objects in Python.
 
@@ -36,3 +53,5 @@ my_collection.get_sector(my_sector.sector_code).add_company(my_company)</code>
 
 From here, instantiate SectorQuotes and Company quotes
 And then start querying them
+
+

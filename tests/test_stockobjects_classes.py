@@ -47,17 +47,19 @@ class SetupObject:
         self.this_sector = None
         self.this_company = None
 
-    def generate_sector(self):
+    def generate_sector(self) -> Sector:
         name = "sectorname-" + "".join(
             random.choices(string.ascii_uppercase + string.digits, k=10)
         )
         code = "sectorcode-" + "".join(
             random.choices(string.ascii_uppercase + string.digits, k=4)
         )
+
         self.this_sector = Sector(sector_name=name, sector_code=code)
+
         return self.this_sector
 
-    def generate_company(self, sector):
+    def generate_company(self, sector: Sector) -> Company:
         name = "companyname-" + "".join(
             random.choices(string.ascii_uppercase + string.digits, k=10)
         )
@@ -68,6 +70,7 @@ class SetupObject:
         self.this_company = Company(
             company_name=name, company_code=code, sector_object=sector
         )
+
         return self.this_company
 
     def generate_sector_collection(
@@ -105,7 +108,7 @@ class SetupObject:
             companies_generated = 0
             day = CONST_QUOTES_START_DAY
             while companies_generated < company_count:
-                generated_company = self.generate_company(generated_sector)
+                generated_company = self.generate_company(None)
 
                 self.this_collection.get_sector(
                     generated_sector.sector_code
@@ -309,6 +312,17 @@ class TestCompany(unittest.TestCase):  # done
         test_company.add_quote_object(test_quote_object)
 
         self.assertEquals(test_company._quotes[CONST_QUOTE2_DATE], test_quote_object)
+
+    def test_get_sector_none(self):
+        test_company = Company(
+            company_name=CONST_COMPANY1_COMPANY_NAME,
+            company_code=CONST_COMPANY1_COMPANY_NAME,
+            sector_object=None,
+        )
+
+        self.assertEqual(None, test_company.sector_code)
+        self.assertEqual(None, test_company.sector_name)
+        self.assertEqual(None, test_company.sector_object)
 
     def test_add_quote(self):
         setup = SetupObject()
@@ -1766,3 +1780,85 @@ class TestSectorQuote(unittest.TestCase):  # done
         self.assertEqual(result["low"], 5.6)
         self.assertEqual(result["close"], 6.8)
         self.assertEqual(result["volume"], 21000000)
+
+
+class TestSectorCollectionLoad(unittest.TestCase):  # done
+    def setUp(self):
+        self.payload = {
+            "Records": [
+                {
+                    "messageId": "7722ee10-38da-4366-870f-181c75d66209",
+                    "receiptHandle": "AQEB3NdXCSeIT6lMwx4IMpn/2FwXZSlbioifULcR217lcYz5rHw7uJqV/0DPxIkrqOmhaC412x3WIhcn5XyMwGv6ozOTpCvXEx21rMjv5TXudMmxZiDtlVQd89uEJKLGgfwnNBv2i3fCEk+GT3ik5J1yab42UTj6C5JOlN/SosnuoQOb5LPZ/TY/W296ZQjDGIS3XyBkrFAVbBNS+cCVE+L9j1n3Bx3ITIKYvGr9PMYbd6xmVSisPkj66kFGEKbSYOU+JUycjWBhUfu2pDvILnfuLCJgJvNqr18QWzbx0kbhUOdFsY4LsQGqJpSm8wA6JfamKHmcAStatZa48yYo5Uvrqu7gWKKu5SkCx9s7m4QyR/MJ2QZ/RWKFHsao4LdSKQct/eKxUZtxZCQIVBSXmAGOXA==",
+                    "body": '{"quoteObject": [{"quote_date": "2021-03-30", "stock_code": "8ec", "open": 0.032999999821186066, "high": 0.032999999821186066, "low": 0.032999999821186066, "close": 0.032999999821186066, "volume": 0},{"quote_date": "2021-03-31", "stock_code": "8ec", "open": 0.032999999821186066, "high": 0.032999999821186066, "low": 0.032999999821186066, "close": 0.032999999821186066, "volume": 0},{"quote_date": "2021-03-28", "stock_code": "8ec", "open": 0.032999999821186066, "high": 0.032999999821186066, "low": 0.032999999821186066, "close": 0.032999999821186066, "volume": 0}]}',
+                    "attributes": {
+                        "ApproximateReceiveCount": "4",
+                        "SentTimestamp": "1627288425551",
+                        "SenderId": "AIDAJBRAAZQ4REFJVXYLQ",
+                        "ApproximateFirstReceiveTimestamp": "1627288425551",
+                    },
+                    "messageAttributes": {
+                        "QuoteType": {
+                            "stringValue": "stock",
+                            "stringListValues": [],
+                            "binaryListValues": [],
+                            "dataType": "String",
+                        }
+                    },
+                    "md5OfMessageAttributes": "fd9611cd8619b84e072c6770857bf92c",
+                    "md5OfBody": "4e243d74ebe4f67ef8622b579d1cc105",
+                    "eventSource": "aws:sqs",
+                    "eventSourceARN": "arn:aws:sqs:us-west-2:036372598227:quote-updates",
+                    "awsRegion": "us-west-2",
+                },
+                {
+                    "messageId": "7722ee10-38da-4366-870f-181c75d66209",
+                    "receiptHandle": "AQEB3NdXCSeIT6lMwx4IMpn/2FwXZSlbioifULcR217lcYz5rHw7uJqV/0DPxIkrqOmhaC412x3WIhcn5XyMwGv6ozOTpCvXEx21rMjv5TXudMmxZiDtlVQd89uEJKLGgfwnNBv2i3fCEk+GT3ik5J1yab42UTj6C5JOlN/SosnuoQOb5LPZ/TY/W296ZQjDGIS3XyBkrFAVbBNS+cCVE+L9j1n3Bx3ITIKYvGr9PMYbd6xmVSisPkj66kFGEKbSYOU+JUycjWBhUfu2pDvILnfuLCJgJvNqr18QWzbx0kbhUOdFsY4LsQGqJpSm8wA6JfamKHmcAStatZa48yYo5Uvrqu7gWKKu5SkCx9s7m4QyR/MJ2QZ/RWKFHsao4LdSKQct/eKxUZtxZCQIVBSXmAGOXA==",
+                    "body": '{"quoteObject": [{"quote_date": "2021-03-30", "sector_code": "xmj", "open": 0.032999999821186066, "high": 0.032999999821186066, "low": 0.032999999821186066, "close": 0.032999999821186066, "volume": 0},{"quote_date": "2021-03-31", "sector_code": "xmj", "open": 0.032999999821186066, "high": 0.032999999821186066, "low": 0.032999999821186066, "close": 0.032999999821186066, "volume": 0},{"quote_date": "2021-03-29", "sector_code": "xmj", "open": 0.032999999821186066, "high": 0.032999999821186066, "low": 0.032999999821186066, "close": 0.032999999821186066, "volume": 0},{"quote_date": "2021-03-30", "sector_code": "xzz", "open": 0.032999999821186066, "high": 0.032999999821186066, "low": 0.032999999821186066, "close": 0.032999999821186066, "volume": 0},{"quote_date": "2021-03-31", "sector_code": "xzz", "open": 0.032999999821186066, "high": 0.032999999821186066, "low": 0.032999999821186066, "close": 0.032999999821186066, "volume": 0},{"quote_date": "2021-03-29", "sector_code": "xzz", "open": 0.032999999821186066, "high": 0.032999999821186066, "low": 0.032999999821186066, "close": 0.032999999821186066, "volume": 0}]}',
+                    "attributes": {
+                        "ApproximateReceiveCount": "4",
+                        "SentTimestamp": "1627288425551",
+                        "SenderId": "AIDAJBRAAZQ4REFJVXYLQ",
+                        "ApproximateFirstReceiveTimestamp": "1627288425551",
+                    },
+                    "messageAttributes": {
+                        "QuoteType": {
+                            "stringValue": "sector",
+                            "stringListValues": [],
+                            "binaryListValues": [],
+                            "dataType": "String",
+                        }
+                    },
+                    "md5OfMessageAttributes": "fd9611cd8619b84e072c6770857bf92c",
+                    "md5OfBody": "4e243d74ebe4f67ef8622b579d1cc105",
+                    "eventSource": "aws:sqs",
+                    "eventSourceARN": "arn:aws:sqs:us-west-2:036372598227:quote-updates",
+                    "awsRegion": "us-west-2",
+                },
+            ]
+        }
+
+        self.setup = SetupObject()
+        self.test_collection = self.setup.generate_sector_collection(
+            sector_count=CONST_TEST_SECTOR_COUNT,
+            company_count=CONST_TEST_COMPANY_COUNT,
+            sector_quotes=CONST_TEST_SECTOR_QUOTES,
+            company_quotes=CONST_TEST_COMPANY_QUOTES,
+        )
+
+    def tearDown(self):
+        del self.test_collection
+        del self.setup
+
+    def test_load_sqs(self):
+        self.assertEqual(self.test_collection.load_sqs(payload=self.payload), True)
+        self.assertEqual(
+            len(self.test_collection._sectors), CONST_TEST_SECTOR_COUNT + 3
+        )
+        self.assertEqual(
+            len(self.test_collection._sectors["Boilerplate"]._companies),
+            1,
+        )
+        self.assertEqual(
+            len(self.test_collection._sectors["Boilerplate"]._companies["8ec"]._quotes),
+            3,
+        )

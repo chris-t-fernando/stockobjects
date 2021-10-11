@@ -12,12 +12,19 @@ class Company:
     _sector_code: str
     _quotes: Dict[datetime, CompanyQuote]
 
-    def __init__(self, company_name, company_code, sector_object):
+    def __init__(self, company_name: str, company_code: str, sector_object=None):
         self._company_name = company_name
         self._company_code = company_code
-        self._sector_object = sector_object
-        self._sector_name = sector_object.sector_name
-        self._sector_code = sector_object.sector_code
+
+        if sector_object != None:
+            self._sector_object = sector_object
+            self._sector_name = sector_object.sector_name
+            self._sector_code = sector_object.sector_code
+        else:
+            self._sector_object = None
+            self._sector_name = None
+            self._sector_code = None
+
         self._quotes = {}
 
     @property
@@ -31,6 +38,12 @@ class Company:
     @property
     def sector_object(self) -> str:
         return self._sector_object
+
+    @sector_object.setter
+    def sector_object(self, new_sector_object):
+        self._sector_object = new_sector_object
+        self._sector_name = new_sector_object.sector_name
+        self._sector_code = new_sector_object.sector_code
 
     @property
     def company_code(self) -> str:
